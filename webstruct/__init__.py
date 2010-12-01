@@ -6,7 +6,7 @@ from jinja2 import Environment, FileSystemLoader
 
 class ConfigurationException(Exception):
     def __init__(self, message):
-        super(ConfigurationException. self).__init__
+        super(ConfigurationException, self).__init__
         self.message = message
 
     def __repr__(self):
@@ -20,8 +20,15 @@ class ApplicationType(object):
         self.bases = bases
         self.dct = dct
         
-        parent_template = sys._getframe(1).f_locals.get('templates')
-        templates = dct.get('templates', parent_template)
+        templates = dct.get('templates')
+        depth = 1
+        while templates is None:
+            try:
+                templates = sys._getframe(depth).f_locals.get('templates')
+            except ValueError:
+                break
+            depth += 1
+
         if templates is None:
             raise ConfigurationException('templates is not found')
         environment = Environment(loader=FileSystemLoader(templates))

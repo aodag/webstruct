@@ -42,6 +42,11 @@ class TestApplication(unittest.TestCase):
                 @webstruct.view(template='index.html')
                 def more(request):
                     return {'message': 'more'}
+
+                class sub_contents(webstruct.Application):
+                    @webstruct.view(template='index.html')
+                    def index(request):
+                        return {'message': 'This is subsub'}
                 
         app = TestApp(Application)
         res = app.get('/sub_contents/')
@@ -49,6 +54,9 @@ class TestApplication(unittest.TestCase):
 
         res = app.get('/sub_contents/more')
         self.assertEqual(res.body, "more")
+
+        res = app.get('/sub_contents/sub_contents')
+        self.assertEqual(res.body, "This is subsub")
 
     def test_pattern(self):
         import webstruct
