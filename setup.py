@@ -21,4 +21,5 @@ setup(
         "test":tests_require,
     },
     test_suite="nose.collector",
-    )
+    packages=find_packages(exclude=['tests', 'examples'])
+)
