@@ -5,6 +5,7 @@ from webob.exc import *
 from jinja2 import Environment, FileSystemLoader
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.orm.exc import *
 from sqlalchemy.ext.declarative import declarative_base
 import transaction
 from zope.sqlalchemy import ZopeTransactionExtension
@@ -22,11 +23,24 @@ def initialize_db(db_string):
     metadata.bind = engine
 
 
-def query(model):
+def query(model, **kw):
     if DBSession is None:
         raise ConfigurationException('database is not configured.')
 
-    return DBSession.query(model)
+    q = DBSession.query(model)
+    if kw:
+        q = q.filter_by(**kw)
+    return q
+
+def query_one(model, **kw):
+    q = query(model, **kw)
+    return q.one()
+
+def query_one_or_404(model, **kw):
+    try:
+        return query_one(model, **kw)
+    except NoResultFound:
+        raise HTTPNotFound
 
 def new_data(cls, **kw):
     d = cls(**kw)
@@ -119,3 +133,25 @@ def view(**config):
         return wrap
     return dec
 
+def transaction_middleware(app):
+    def wraped(environ, start_response):
+        try:
+            data = app(environ, start_response)
+            transaction.commit()
+            return data
+        except:
+            if DBSession is not None:
+                DBSession.rollback()
+            raise
+        finally:
+            if DBSession is not None:
+                DBSession.remove()
+    return wraped
+
+def run(application, port=8000, host='0.0.0.0'):
+
+    from wsgiref.simple_server import make_server
+    application = transaction_middleware(application)
+    application = HTTPExceptionMiddleware(application)
+    httpd = make_server(host, port, application)
+    httpd.serve_forever()
