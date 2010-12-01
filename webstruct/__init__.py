@@ -19,6 +19,8 @@ class ApplicationType(object):
         self.name = name
         self.bases = bases
         self.dct = dct
+        if 'pattern' in dct:
+            self.pattern = re.compile(dct['pattern'])
         
         templates = dct.get('templates')
         depth = 1

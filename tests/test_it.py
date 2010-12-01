@@ -58,7 +58,7 @@ class TestApplication(unittest.TestCase):
         res = app.get('/sub_contents/sub_contents')
         self.assertEqual(res.body, "This is subsub")
 
-    def test_pattern(self):
+    def test_pattern_match1(self):
         import webstruct
         class Application(webstruct.Application):
             templates = [os.path.join(here, 'templates')]
@@ -76,3 +76,32 @@ class TestApplication(unittest.TestCase):
         app = TestApp(Application)
         res = app.get('/users/aodag')
         self.assertEqual(res.body, "This is aodag")
+
+    def test_pattern_match2(self):
+        import webstruct
+        class Application(webstruct.Application):
+            templates = [os.path.join(here, 'templates')]
+
+            @webstruct.view(template='index.html')
+            def index(request):
+                return {'message': 'This is Top'}
+                
+            class users(webstruct.Application):
+                class user_view(webstruct.Application):
+                    pattern=r'(?P<username>\w+)'
+                    @webstruct.view(template='user.html', )
+                    def index(request):
+                        name = request.urlvars['username']
+                        return dict(name=name)
+                    @webstruct.view(template='index.html', )
+                    def edit(request):
+                        name = request.urlvars['username']
+                        return dict(message='edit %s' % name)
+
+
+
+        app = TestApp(Application)
+        res = app.get('/users/aodag')
+        self.assertEqual(res.body, "This is aodag")
+        res = app.get('/users/aodag/edit')
+        self.assertEqual(res.body, "edit aodag")
