@@ -2,6 +2,9 @@ from setuptools import setup, find_packages
 requires = [
     "WebOb",
     "Jinja2",
+    "SQLAlchemy",
+    "transaction",
+    "zope.sqlalchemy",
 ]
 
 tests_require=[

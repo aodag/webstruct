@@ -105,3 +105,33 @@ class TestApplication(unittest.TestCase):
         self.assertEqual(res.body, "This is aodag")
         res = app.get('/users/aodag/edit')
         self.assertEqual(res.body, "edit aodag")
+
+    def test_db(self):
+        import webstruct
+        class Application(webstruct.Application):
+            db_url = 'sqlite:///'
+            templates = [os.path.join(here, 'templates')]
+
+            @webstruct.view(template='index.html')
+            def index(request):
+                return {'message': 'This is Top'}
+            class users(webstruct.Application):
+                @webstruct.view(template='show_user.html', pattern=r'(?P<username>\w+)')
+                def show_user(request):
+                    name = request.urlvars['username']
+                    user = webstruct.query(User).one()
+                    return dict(user=user)
+        from sqlalchemy import Column, Integer, String, UnicodeText
+        class User(webstruct.Model):
+            __tablename__ = 'user'
+            id = Column(Integer, primary_key=True)
+            username = Column(String(255), unique=True)
+            description = Column(UnicodeText)
+        webstruct.metadata.create_all()
+        user = webstruct.new_data(User, username='aodag', description=u"this is test")
+        webstruct.transaction.commit()
+        app = TestApp(Application)
+        res = app.get('/users/aodag')
+        self.assert_('aodag' in res.body)
+        self.assert_('this is test' in res.body)
+

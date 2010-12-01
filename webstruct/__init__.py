@@ -3,6 +3,35 @@ import re
 from webob import Request, Response
 from webob.exc import *
 from jinja2 import Environment, FileSystemLoader
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.ext.declarative import declarative_base
+import transaction
+from zope.sqlalchemy import ZopeTransactionExtension
+
+Model = declarative_base()
+metadata = Model.metadata
+DBSession = None
+def initialize_db(db_string):
+    global DBSession
+    if DBSession is not None:
+        raise ConfigurationException('database configuration already exisits.')
+    engine = create_engine(db_string)
+    DBSession = scoped_session(
+        sessionmaker(bind=engine, extension=ZopeTransactionExtension()))
+    metadata.bind = engine
+
+
+def query(model):
+    if DBSession is None:
+        raise ConfigurationException('database is not configured.')
+
+    return DBSession.query(model)
+
+def new_data(cls, **kw):
+    d = cls(**kw)
+    DBSession.add(d)
+    return d
 
 class ConfigurationException(Exception):
     def __init__(self, message):
@@ -21,6 +50,8 @@ class ApplicationType(object):
         self.dct = dct
         if 'pattern' in dct:
             self.pattern = re.compile(dct['pattern'])
+        if 'db_url' in dct:
+            initialize_db(dct['db_url'])
         
         templates = dct.get('templates')
         depth = 1
